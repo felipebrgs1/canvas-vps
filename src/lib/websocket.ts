@@ -11,10 +11,12 @@ type StatusHandler = (connected: boolean) => void;
 export function connectWS(onMessage: MessageHandler, onStatus: StatusHandler) {
   if (ws?.readyState === WebSocket.OPEN) return;
 
+  console.log('[WS] Connecting to', WS_URL);
   ws = new WebSocket(WS_URL);
 
   ws.onopen = () => {
     console.log('[WS] Connected');
+    send({ type: 'hello', role: 'dashboard' });
     onStatus(true);
   };
 

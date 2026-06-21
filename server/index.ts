@@ -29,12 +29,8 @@ type VPSNode = {
 };
 
 type Role = "agent" | "dashboard";
-
-type Client = {
-  role: Role;
-  nodeId?: string;
-  socket: WebSocket;
-};
+type Client = { role: Role | null; nodeId?: string };
+const clients = new WeakMap<WebSocket, Client>();
 
 const PORT = Number(process.env.PORT) || 3001;
 const agents = new Map<string, { socket: WebSocket; node: VPSNode }>();
@@ -51,6 +47,7 @@ const broadcastToDashboards = (payload: unknown) => {
 const sendNodeList = (ws: WebSocket) => {
   const list = Array.from(agents.values()).map((a) => a.node);
   send(ws, { type: "snapshot", nodes: list });
+  console.log(`[dashboard] sent snapshot with ${list.length} node(s)`);
 };
 
 const server = Bun.serve({
@@ -64,12 +61,13 @@ const server = Bun.serve({
         { headers: { "content-type": "application/json" } }
       );
     }
-    if (server.upgrade(req, { data: { role: null as Role | null } })) return;
+    if (server.upgrade(req, { data: { role: null } })) return;
     return new Response("Canvas VPS WS Server", { status: 200 });
   },
   websocket: {
     open(ws) {
-      ws.data = { role: null as Role | null, socket: ws } as Client;
+      clients.set(ws, { role: null });
+      console.log(`[conn] open (total: ${agents.size + dashboards.size + 1})`);
     },
     message(ws, raw) {
       let msg: any;
@@ -79,7 +77,8 @@ const server = Bun.serve({
         return;
       }
 
-      const client = ws.data as Client;
+      const client = clients.get(ws);
+      if (!client) return;
 
       if (!client.role) {
         if (msg.type === "hello" && (msg.role === "agent" || msg.role === "dashboard")) {
@@ -89,12 +88,13 @@ const server = Bun.serve({
             console.log(`[agent] hello nodeId=${msg.nodeId}`);
           } else {
             dashboards.add(ws);
+            clients.set(ws, client);
             sendNodeList(ws);
             console.log(`[dashboard] connected (${dashboards.size} online)`);
           }
           return;
         }
-        send(ws, { type: "error", error: "first message must be { type: 'hello', role: ... }" });
+        console.log(`[conn] closing: bad hello`);
         ws.close();
         return;
       }
@@ -105,17 +105,12 @@ const server = Bun.serve({
           client.nodeId = node.id;
           agents.set(node.id, { socket: ws, node });
           broadcastToDashboards({ type: "register", node });
-          console.log(`[agent] registered ${node.id} (${node.name})`);
+          console.log(`[agent] registered ${node.id} (${node.name}) → ${dashboards.size} dashboard(s)`);
         } else if (msg.type === "stats" && msg.id && msg.stats) {
           const entry = agents.get(msg.id);
           if (!entry) return;
           entry.node = { ...entry.node, stats: msg.stats, lastSeen: Date.now() };
-          broadcastToDashboards({
-            type: "stats",
-            id: msg.id,
-            stats: msg.stats,
-            lastSeen: entry.node.lastSeen,
-          });
+          broadcastToDashboards({ type: "stats", id: msg.id, stats: msg.stats, lastSeen: entry.node.lastSeen });
         }
         return;
       }
@@ -123,12 +118,16 @@ const server = Bun.serve({
       if (client.role === "dashboard") {
         if (msg.type === "command" && msg.targetId) {
           const target = agents.get(msg.targetId);
-          if (target) send(target.socket, { type: "command", command: msg.command, targetId: msg.targetId });
+          if (target) {
+            send(target.socket, { type: "command", command: msg.command, targetId: msg.targetId });
+            console.log(`[dashboard] → ${msg.targetId}: ${msg.command}`);
+          }
         }
       }
     },
     close(ws) {
-      const client = ws.data as Client;
+      const client = clients.get(ws);
+      if (!client) return;
       if (client.role === "dashboard") {
         dashboards.delete(ws);
         console.log(`[dashboard] disconnected (${dashboards.size} online)`);
