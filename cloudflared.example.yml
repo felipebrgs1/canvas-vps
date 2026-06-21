@@ -1,0 +1,27 @@
+# Cloudflare Tunnel para o canvas-vps
+#
+# Quick start (sem dominio proprio):
+#   cloudflared tunnel --url ws://localhost:3001
+#   vai gerar wss://xxxx.trycloudflare.com — usa essa URL no agent e no .env
+#
+# Setup com dominio proprio (cloudflared login + tunnel create):
+#   1. cloudflared tunnel login
+#   2. cloudflared tunnel create canvas-vps
+#   3. cloudflared tunnel route dns canvas-vps canvas.seu-dominio.com
+#   4. cp cloudflared.example.yml ~/.cloudflared/config.yml
+#   5. edite o TUNNEL_ID e credentials-file abaixo
+#   6. cloudflared tunnel run canvas-vps
+
+tunnel: SEU_TUNNEL_ID
+credentials-file: /home/SEU_USER/.cloudflared/SEU_TUNNEL_ID.json
+
+ingress:
+  # healthcheck que o cloudflared bate
+  - hostname: canvas.seu-dominio.com
+    path: /health
+    service: http://localhost:3001
+  # websocket (agent + dashboard conectam aqui)
+  - hostname: canvas.seu-dominio.com
+    path: /*
+    service: ws://localhost:3001
+  - service: http_status:404
