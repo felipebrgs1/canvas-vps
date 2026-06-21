@@ -16,7 +16,7 @@ export function connectWS(onMessage: MessageHandler, onStatus: StatusHandler) {
 
   ws.onopen = () => {
     console.log('[WS] Connected');
-    send({ type: 'hello', role: 'dashboard' });
+    ws!.send(JSON.stringify({ type: 'hello', role: 'dashboard' }));
     onStatus(true);
   };
 
