@@ -2,10 +2,14 @@
   import { nodes, selectedNodeId, selectNode, wsConnected } from '../state.svelte';
   import SidebarHeader from './sidebar/SidebarHeader.svelte';
   import NodeItem from './sidebar/NodeItem.svelte';
+  import AddNodeModal from './AddNodeModal.svelte';
   import type { VPSNode } from '../types';
   import { Plus } from '@lucide/svelte';
 
   let collapsed = $state(false);
+  let showAdd = $state(false);
+
+  const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3001';
 
   type Group = { label: string; status: VPSNode['status']; nodes: VPSNode[] };
 
@@ -28,11 +32,20 @@
   <SidebarHeader {collapsed} ontoggle={() => (collapsed = !collapsed)} />
 
   {#if !collapsed}
-    <div class="px-4 py-2 flex items-center gap-1.5 border-b border-border shrink-0">
-      <span class="w-1.5 h-1.5 rounded-full {statusClass}"></span>
-      <span class="text-[10px] text-text-secondary uppercase tracking-wider">
-        {$wsConnected ? 'Conectado' : 'Desconectado'}
-      </span>
+    <div class="px-4 py-2 flex items-center justify-between border-b border-border shrink-0">
+      <div class="flex items-center gap-1.5">
+        <span class="w-1.5 h-1.5 rounded-full {statusClass}"></span>
+        <span class="text-[10px] text-text-secondary uppercase tracking-wider">
+          {$wsConnected ? 'Conectado' : 'Desconectado'}
+        </span>
+      </div>
+      <button
+        onclick={() => (showAdd = true)}
+        class="flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded-md bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+        title="Adicionar VPS"
+      >
+        <Plus class="w-3 h-3" /> Add VPS
+      </button>
     </div>
   {/if}
 
@@ -102,3 +115,5 @@
     </div>
   {/if}
 </aside>
+
+<AddNodeModal open={showAdd} {wsUrl} onclose={() => (showAdd = false)} />

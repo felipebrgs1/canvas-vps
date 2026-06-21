@@ -83,12 +83,14 @@ const netStats = () => {
   let totalOut = 0;
 
   for (const line of lines) {
-    const m = line.trim().match(/^([^:]+):\s*(\d+)\s+(\d+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+\s+(\d+)\s+(\d+)/);
-    if (!m) continue;
-    const name = m[1];
+    const colon = line.indexOf(":");
+    if (colon < 0) continue;
+    const name = line.slice(0, colon).trim();
     if (name === "lo") continue;
-    const rx = Number(m[2]);
-    const tx = Number(m[10]);
+    const cols = line.slice(colon + 1).trim().split(/\s+/).map(Number);
+    if (cols.length < 9) continue;
+    const rx = cols[0];
+    const tx = cols[8];
     totalIn += rx;
     totalOut += tx;
     const prev = netPrev.get(name);

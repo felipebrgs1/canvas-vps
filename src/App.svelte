@@ -10,16 +10,15 @@
   onMount(() => {
     connectWS(
       (data) => {
-        const msg = data as { type: string; node?: VPSNode; id?: string; stats?: VPSNode['stats'] };
-        if (msg.type === 'snapshot' && Array.isArray((msg as { nodes?: VPSNode[] }).nodes)) {
-          (msg as { nodes: VPSNode[] }).nodes.forEach((n) => addNode(n));
+        const msg = data as Record<string, unknown>;
+        if (msg.type === 'snapshot' && Array.isArray(msg.nodes)) {
+          (msg.nodes as VPSNode[]).forEach((n) => addNode(n));
         } else if (msg.type === 'register' && msg.node) {
-          addNode(msg.node);
+          addNode(msg.node as VPSNode);
         } else if (msg.type === 'stats' && msg.id && msg.stats) {
-          updateNode(msg.id, { stats: msg.stats, lastSeen: Date.now() });
-        } else if (msg.type === 'offline' && (msg as { id?: string }).id) {
-          const id = (msg as { id: string }).id;
-          import('./lib/state.svelte').then((s) => s.removeNode(id));
+          updateNode(msg.id as string, { stats: msg.stats as VPSNode['stats'], lastSeen: Date.now() });
+        } else if (msg.type === 'offline' && msg.id) {
+          import('./lib/state.svelte').then((s) => s.removeNode(msg.id as string));
         }
       },
       (connected) => { wsConnected.set(connected); }

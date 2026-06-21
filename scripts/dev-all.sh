@@ -37,6 +37,7 @@ echo "       tunnel: $URL"
 echo "       ws:     $WS_URL"
 
 echo "VITE_WS_URL=$WS_URL" > .env
+echo "       wrote:  .env"
 
 echo "[3/4] Starting server..."
 bun run server/index.ts &
