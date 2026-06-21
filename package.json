@@ -8,6 +8,7 @@
     "dev:host": "vite --host",
     "dev:server": "bun run server/index.ts",
     "dev:agent": "bun run agent/index.ts",
+    "dev:all": "bash scripts/dev-all.sh",
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
